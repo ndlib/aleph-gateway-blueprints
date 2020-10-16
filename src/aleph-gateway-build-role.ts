@@ -101,11 +101,25 @@ export class AlephGatewayBuildRole extends Role {
       }),
     )
 
+    // Allow getting oracle lambda layer
+    this.addToPolicy(
+      new PolicyStatement({
+        resources: [
+          Fn.sub('arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:layer:oracle-lambda-layer:*'),
+        ],
+        actions: [
+          'lambda:GetLayerVersion',
+          'lambda:GetLayerVersionPolicy',
+        ],
+      }),
+    )
+
     // Needed for setting up lambda VPC info
     this.addToPolicy(
       new PolicyStatement({
         resources: ['*'],
         actions: [
+          'ec2:DescribeNetworkInterfaces',
           'ec2:DescribeSecurityGroups',
           'ec2:DescribeSecurityGroupReferences',
           'ec2:DescribeSubnets',
