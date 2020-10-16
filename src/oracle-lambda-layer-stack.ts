@@ -11,7 +11,7 @@ export default class OracleLambdaLayerStack extends cdk.Stack {
     super(scope, id, props)
 
     // Check for one of the required files. We assume if they have this they probably ran the script to copy everything.
-    if (!fs.existsSync('./oracle-instant-client/lib/libociicus.so')) {
+    if (!process.env.CI && !fs.existsSync('./oracle-instant-client/lib/libociicus.so')) {
       throw new Error('Oracle instant client files appear to be missing. Please read the README.')
     }
 

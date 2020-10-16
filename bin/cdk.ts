@@ -49,7 +49,7 @@ if (lambdaCodePath) {
 }
 
 const pipelineName = app.node.tryGetContext('pipelineStackName') || `aleph-gateway-pipeline`
-new AlephGatewayPipelineStack(app, pipelineName, {
+const pipelineStack = new AlephGatewayPipelineStack(app, pipelineName, {
   stackName: pipelineName,
   gitOwner: app.node.tryGetContext('gitOwner'),
   gitTokenPath: app.node.tryGetContext('gitTokenPath'),
@@ -67,3 +67,4 @@ new AlephGatewayPipelineStack(app, pipelineName, {
   secretsPath,
   networkStackName,
 })
+pipelineStack.addDependency(oracleLayerStack)
