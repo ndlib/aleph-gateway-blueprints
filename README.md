@@ -12,6 +12,17 @@ Place the zip at the repo root, then run `./setup.sh`, which will in turn run `.
 The necessary files will be copied to `oracle-instant-client/lib`, which should already contain `libaio.so.1`. This is a dependency for the instant client to work, and cannot be compiled on Mac, so it is checked in precompiled.
 
 ## Deployment
+### Service deployment
 ```
 cdk deploy -c stage=dev aleph-gateway-dev
+```
+
+### Pipeline deployment
+In order for the CodePipeline to build successfully, the `oracle-lambda-layer` stack should be deployed. If this is the first time deploying to the aws account, download the Oracle Instant Client as described above, then deploy the stack:
+```
+cdk deploy oracle-lambda-layer
+```
+Once this stack is in place, deploy the pipeline:
+```
+cdk deploy aleph-gateway-pipeline
 ```
