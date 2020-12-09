@@ -13,6 +13,7 @@ import { SecretValue } from '@aws-cdk/core'
 import { ArtifactBucket, PipelineNotifications, SlackApproval } from '@ndlib/ndlib-cdk'
 import AlephGatewayBuildProject from './aleph-gateway-build-project'
 import AlephGatewayBuildRole from './aleph-gateway-build-role'
+import AlephGatewayQaProject from './aleph-gateway-qa-project'
 
 const stages = ['test', 'prod']
 
@@ -110,6 +111,18 @@ export default class AlephGatewayPipelineStack extends cdk.Stack {
       environmentVariables: actionEnvironment,
     })
 
+    // AUTOMATED QA
+    const qaProject = new AlephGatewayQaProject(this, 'QAProject', {
+      stage: 'test',
+      role: codebuildRole,
+    })
+    const smokeTestsAction = new CodeBuildAction({
+      input: appSourceArtifact,
+      project: qaProject,
+      actionName: 'SmokeTests',
+      runOrder: 98,
+    })
+
     // APPROVAL
     const approvalTopic = new sns.Topic(this, 'PipelineApprovalTopic', {
       displayName: 'PipelineApprovalTopic',
@@ -130,7 +143,7 @@ export default class AlephGatewayPipelineStack extends cdk.Stack {
     // TEST STAGE
     pipeline.addStage({
       stageName: 'DeployToTest',
-      actions: [deployToTestAction, manualApprovalAction],
+      actions: [deployToTestAction, smokeTestsAction, manualApprovalAction],
     })
 
     // DEPLOY TO PROD
@@ -147,10 +160,22 @@ export default class AlephGatewayPipelineStack extends cdk.Stack {
       environmentVariables: actionEnvironment,
     })
 
+    // AUTOMATED QA
+    const prodQaProject = new AlephGatewayQaProject(this, 'QAProjectProd', {
+      stage: 'prod',
+      role: codebuildRole,
+    })
+    const prodSmokeTestsAction = new CodeBuildAction({
+      input: appSourceArtifact,
+      project: prodQaProject,
+      actionName: 'SmokeTests',
+      runOrder: 98,
+    })
+
     // PROD STAGE
     pipeline.addStage({
       stageName: 'DeployToProd',
-      actions: [deployToProdAction],
+      actions: [deployToProdAction, prodSmokeTestsAction],
     })
   }
 }
