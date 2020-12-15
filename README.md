@@ -24,5 +24,5 @@ cdk deploy oracle-lambda-layer
 ```
 Once this stack is in place, deploy the pipeline:
 ```
-cdk deploy aleph-gateway-pipeline
+cdk deploy aleph-gateway-pipeline -c slackNotifyStackName=slack-approval-bot-wse-notifier
 ```
