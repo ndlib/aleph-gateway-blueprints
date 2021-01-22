@@ -4,7 +4,7 @@ import apigateway = require('@aws-cdk/aws-apigateway')
 import lambda = require('@aws-cdk/aws-lambda')
 import { RetentionDays } from '@aws-cdk/aws-logs'
 import { StringParameter } from '@aws-cdk/aws-ssm'
-import { Vpc, SecurityGroup } from '@aws-cdk/aws-ec2'
+import { Vpc, SecurityGroup, Subnet } from '@aws-cdk/aws-ec2'
 
 export interface IAlephGatewayStackProps extends cdk.StackProps {
   readonly stage: string
@@ -51,6 +51,14 @@ export default class AlephGatewayStack extends cdk.Stack {
         Fn.importValue(`${props.networkStackName}:PrivateSubnet2ID`),
       ],
     })
+    const subnetId = StringParameter.valueForStringParameter(this, `${paramStorePath}/subnetid`)
+    const availabilityZone = StringParameter.valueForStringParameter(this, `${paramStorePath}/subnet-az`)
+    // Subnet.fromSubnetId doesn't get availability zone, which is apparently necessary for some constructs
+    const subnet = Subnet.fromSubnetAttributes(this, 'VpcSubnet', {
+      subnetId: subnetId,
+      availabilityZone: availabilityZone,
+    })
+
     const securityGroupId = StringParameter.valueForStringParameter(this, `${paramStorePath}/securitygroupid`)
     const securityGroup = SecurityGroup.fromSecurityGroupId(this, 'LambdaSecurityGroup', securityGroupId)
 
@@ -69,7 +77,7 @@ export default class AlephGatewayStack extends cdk.Stack {
       environment: env,
       vpc: lambdaVpc,
       vpcSubnets: {
-        subnets: lambdaVpc.privateSubnets,
+        subnets: [subnet],
       },
       securityGroups: [securityGroup],
     })
@@ -86,7 +94,7 @@ export default class AlephGatewayStack extends cdk.Stack {
       environment: env,
       vpc: lambdaVpc,
       vpcSubnets: {
-        subnets: lambdaVpc.privateSubnets,
+        subnets: [subnet],
       },
       securityGroups: [securityGroup],
     })
@@ -103,7 +111,7 @@ export default class AlephGatewayStack extends cdk.Stack {
       environment: env,
       vpc: lambdaVpc,
       vpcSubnets: {
-        subnets: lambdaVpc.privateSubnets,
+        subnets: [subnet],
       },
       securityGroups: [securityGroup],
     })
@@ -120,7 +128,7 @@ export default class AlephGatewayStack extends cdk.Stack {
       environment: env,
       vpc: lambdaVpc,
       vpcSubnets: {
-        subnets: lambdaVpc.privateSubnets,
+        subnets: [subnet],
       },
       securityGroups: [securityGroup],
     })
@@ -140,7 +148,7 @@ export default class AlephGatewayStack extends cdk.Stack {
       },
       vpc: lambdaVpc,
       vpcSubnets: {
-        subnets: lambdaVpc.privateSubnets,
+        subnets: [subnet],
       },
       securityGroups: [securityGroup],
       layers: [oracleLayer],
@@ -161,7 +169,7 @@ export default class AlephGatewayStack extends cdk.Stack {
       },
       vpc: lambdaVpc,
       vpcSubnets: {
-        subnets: lambdaVpc.privateSubnets,
+        subnets: [subnet],
       },
       securityGroups: [securityGroup],
       layers: [oracleLayer],
@@ -181,7 +189,7 @@ export default class AlephGatewayStack extends cdk.Stack {
       },
       vpc: lambdaVpc,
       vpcSubnets: {
-        subnets: lambdaVpc.privateSubnets,
+        subnets: [subnet],
       },
       securityGroups: [securityGroup],
     })
