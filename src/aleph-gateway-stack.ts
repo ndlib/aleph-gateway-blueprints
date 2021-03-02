@@ -26,6 +26,7 @@ export default class AlephGatewayStack extends cdk.Stack {
       SENTRY_ENVIRONMENT: props.stage,
       SENTRY_RELEASE: `${props.sentryProject}@${props.sentryVersion}`,
       ALEPH_URL: StringParameter.valueForStringParameter(this, `${paramStorePath}/aleph_url`),
+      ALEPH_REST_API_URL: StringParameter.valueForStringParameter(this, `${paramStorePath}/aleph_rest_api_url`),
       AUTHORIZED_CLIENTS: StringParameter.valueForStringParameter(this, `${paramStorePath}/authorized_clients`),
       DEFAULT_LIBRARY: 'ndu50',
     }
