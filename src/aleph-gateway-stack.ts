@@ -5,7 +5,7 @@ import lambda = require('@aws-cdk/aws-lambda')
 import { RetentionDays } from '@aws-cdk/aws-logs'
 import { StringParameter } from '@aws-cdk/aws-ssm'
 import { Vpc, SecurityGroup, Subnet } from '@aws-cdk/aws-ec2'
-import { Role, ServicePrincipal, ManagedPolicy } from '@aws-cdk/aws-iam'
+import { Role, ServicePrincipal, ManagedPolicy, PolicyDocument, PolicyStatement } from '@aws-cdk/aws-iam'
 
 export interface IAlephGatewayStackProps extends cdk.StackProps {
   readonly stage: string
@@ -39,16 +39,6 @@ export default class AlephGatewayStack extends cdk.Stack {
       ALEPH_ORACLE_SID: SecretValue.secretsManager(props.secretsPath, { jsonField: 'db_sid' }).toString(),
     }
 
-    // Role for lambda Execution. If we don't create this, cdk will make one for EACH lambda
-    const lambdaExecutionRole = new Role(this, 'LambdaRole', {
-      roleName: `${this.stackName}-lambdaExecutionRole`,
-      assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
-      managedPolicies: [
-        ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'),
-        ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole'),
-      ],
-    })
-
     // VPC needed to access certain APIs.
     const vpcId = Fn.importValue(`${props.networkStackName}:VPCID`)
     const lambdaVpc = Vpc.fromVpcAttributes(this, 'LambdaVpc', {
@@ -76,6 +66,37 @@ export default class AlephGatewayStack extends cdk.Stack {
 
     const oracleLayerArn = StringParameter.valueForStringParameter(this, `/all/oracle-lambda-layer/layer-version-arn`)
     const oracleLayer = lambda.LayerVersion.fromLayerVersionArn(this, 'OracleLambdaLayer', oracleLayerArn)
+
+    // Role for lambda Execution. If we don't create this, cdk will make one for EACH lambda
+    const lambdaExecutionRole = new Role(this, 'LambdaRole', {
+      roleName: `${this.stackName}-lambdaExecutionRole`,
+      assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
+      managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')],
+      inlinePolicies: {
+        vpcPolicy: new PolicyDocument({
+          assignSids: true,
+          statements: [
+            new PolicyStatement({
+              resources: ['*'],
+              actions: ['ec2:DescribeNetworkInterfaces'],
+            }),
+            new PolicyStatement({
+              resources: [
+                `arn:aws:ec2:${this.region}:${this.account}:security-group/${securityGroupId}`,
+                `arn:aws:ec2:${this.region}:${this.account}:subnet/${subnetId}`,
+                `arn:aws:ec2:${this.region}:${this.account}:network-interface/*`,
+              ],
+              actions: [
+                'ec2:CreateNetworkInterface',
+                'ec2:DeleteNetworkInterface',
+                'ec2:AssignPrivateIpAddresses',
+                'ec2:UnassignPrivateIpAddresses',
+              ],
+            }),
+          ],
+        }),
+      },
+    })
 
     const borrowedLambda = new lambda.Function(this, 'BorrowedFunction', {
       functionName: `${props.stackName}-borrowed`,
