@@ -5,6 +5,7 @@ import lambda = require('@aws-cdk/aws-lambda')
 import { RetentionDays } from '@aws-cdk/aws-logs'
 import { StringParameter } from '@aws-cdk/aws-ssm'
 import { Vpc, SecurityGroup, Subnet } from '@aws-cdk/aws-ec2'
+import { Role, ServicePrincipal, ManagedPolicy, PolicyDocument, PolicyStatement } from '@aws-cdk/aws-iam'
 
 export interface IAlephGatewayStackProps extends cdk.StackProps {
   readonly stage: string
@@ -66,6 +67,37 @@ export default class AlephGatewayStack extends cdk.Stack {
     const oracleLayerArn = StringParameter.valueForStringParameter(this, `/all/oracle-lambda-layer/layer-version-arn`)
     const oracleLayer = lambda.LayerVersion.fromLayerVersionArn(this, 'OracleLambdaLayer', oracleLayerArn)
 
+    // Role for lambda Execution. If we don't create this, cdk will make one for EACH lambda
+    const lambdaExecutionRole = new Role(this, 'LambdaRole', {
+      roleName: `${this.stackName}-lambdaExecutionRole`,
+      assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
+      managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')],
+      inlinePolicies: {
+        vpcPolicy: new PolicyDocument({
+          assignSids: true,
+          statements: [
+            new PolicyStatement({
+              resources: ['*'],
+              actions: ['ec2:DescribeNetworkInterfaces'],
+            }),
+            new PolicyStatement({
+              resources: [
+                `arn:aws:ec2:${this.region}:${this.account}:security-group/${securityGroupId}`,
+                `arn:aws:ec2:${this.region}:${this.account}:subnet/${subnetId}`,
+                `arn:aws:ec2:${this.region}:${this.account}:network-interface/*`,
+              ],
+              actions: [
+                'ec2:CreateNetworkInterface',
+                'ec2:DeleteNetworkInterface',
+                'ec2:AssignPrivateIpAddresses',
+                'ec2:UnassignPrivateIpAddresses',
+              ],
+            }),
+          ],
+        }),
+      },
+    })
+
     const borrowedLambda = new lambda.Function(this, 'BorrowedFunction', {
       functionName: `${props.stackName}-borrowed`,
       description: 'Get items loaned to the user.',
@@ -81,6 +113,8 @@ export default class AlephGatewayStack extends cdk.Stack {
         subnets: [subnet],
       },
       securityGroups: [securityGroup],
+      role: lambdaExecutionRole,
+      logRetentionRole: lambdaExecutionRole,
     })
 
     const pendingLambda = new lambda.Function(this, 'PendingFunction', {
@@ -98,6 +132,8 @@ export default class AlephGatewayStack extends cdk.Stack {
         subnets: [subnet],
       },
       securityGroups: [securityGroup],
+      role: lambdaExecutionRole,
+      logRetentionRole: lambdaExecutionRole,
     })
 
     const itemLambda = new lambda.Function(this, 'ItemFunction', {
@@ -115,6 +151,8 @@ export default class AlephGatewayStack extends cdk.Stack {
         subnets: [subnet],
       },
       securityGroups: [securityGroup],
+      role: lambdaExecutionRole,
+      logRetentionRole: lambdaExecutionRole,
     })
 
     const renewLambda = new lambda.Function(this, 'RenewFunction', {
@@ -132,6 +170,8 @@ export default class AlephGatewayStack extends cdk.Stack {
         subnets: [subnet],
       },
       securityGroups: [securityGroup],
+      role: lambdaExecutionRole,
+      logRetentionRole: lambdaExecutionRole,
     })
 
     const userInfoLambda = new lambda.Function(this, 'UserInfoFunction', {
@@ -153,6 +193,8 @@ export default class AlephGatewayStack extends cdk.Stack {
       },
       securityGroups: [securityGroup],
       layers: [oracleLayer],
+      role: lambdaExecutionRole,
+      logRetentionRole: lambdaExecutionRole,
     })
 
     const circHistoryLambda = new lambda.Function(this, 'CircHistoryFunction', {
@@ -174,6 +216,8 @@ export default class AlephGatewayStack extends cdk.Stack {
       },
       securityGroups: [securityGroup],
       layers: [oracleLayer],
+      role: lambdaExecutionRole,
+      logRetentionRole: lambdaExecutionRole,
     })
 
     const queryLambda = new lambda.Function(this, 'QueryFunction', {
@@ -193,6 +237,8 @@ export default class AlephGatewayStack extends cdk.Stack {
         subnets: [subnet],
       },
       securityGroups: [securityGroup],
+      role: lambdaExecutionRole,
+      logRetentionRole: lambdaExecutionRole,
     })
 
     // API GATEWAY
